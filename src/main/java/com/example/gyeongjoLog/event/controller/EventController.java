@@ -4,60 +4,59 @@ import com.example.gyeongjoLog.common.APIResponse;
 import com.example.gyeongjoLog.event.dto.EventDTO;
 import com.example.gyeongjoLog.event.service.EventService;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.annotations.Parameter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/events")
 public class EventController {
 
-    EventService eventService;
+    private final EventService eventService;
 
-    @Autowired
-    public EventController(EventService eventService){
-        this.eventService = eventService;
+    @GetMapping("/myEvents")
+    public ResponseEntity<APIResponse> getMyEvents(Authentication authentication) {
+        return new ResponseEntity<>(eventService.getMyEvents(authentication), HttpStatus.OK);
     }
 
-    @GetMapping("/myEvent")
-    public APIResponse getMyEvents(@RequestParam Long userId) {
-        return eventService.getMyEvents(userId);
+    @GetMapping("/myEvents/summary")
+    public ResponseEntity<APIResponse> getMyEventSummaries(Authentication authentication,
+                                           @RequestParam("eventType") String eventType,
+                                           @RequestParam("date") String date) {
+        return new ResponseEntity<>(eventService.getMyEventSummaries(authentication, eventType, date), HttpStatus.OK);
     }
 
-    @GetMapping("/myEvent/summary")
-    public APIResponse getMyEventSummaries(@RequestParam Long userId,
-                                           @RequestParam String eventType,
-                                           @RequestParam String date) {
-        return eventService.getMyEventSummaries(userId, eventType, date);
+    @GetMapping("/othersEvents/summary")
+    public ResponseEntity<APIResponse> getOtherEventSummaries(Authentication authentication) {
+        return new ResponseEntity<>(eventService.getOtherEventSummaries(authentication), HttpStatus.OK);
     }
 
-    @GetMapping("/othersEvent/summary")
-    public APIResponse getOtherEventSummaries(@RequestParam Long userId) {
-        return eventService.getOtherEventSummaries(userId);
-    }
-
-    @GetMapping()
-    public APIResponse getEventById(@RequestParam Long eventId) {
-        return eventService.getEventById(eventId);
+    @GetMapping("/singleEvent")
+    public ResponseEntity<APIResponse> getEventById(@RequestParam("eventId") Long eventId) {
+        return new ResponseEntity<>(eventService.getEventById(eventId), HttpStatus.OK);
     }
 
     @GetMapping("/yearMonth")
-    public APIResponse getEventsForUserByMonth(@RequestParam Long userId, @RequestParam String date) {
-        return eventService.getEventsByYearMonth(userId, date);
+    public ResponseEntity<APIResponse> getEventsForUserByMonth(Authentication authentication, @RequestParam("date") String date) {
+        return new ResponseEntity<>(eventService.getEventsByYearMonth(authentication, date), HttpStatus.OK);
     }
 
     @PostMapping("/add")
-    public APIResponse createEvent(@RequestParam Long userId, @RequestBody EventDTO eventDto) {
-        return eventService.saveEvent(userId, eventDto);
+    public ResponseEntity<APIResponse> createEvent(Authentication authentication, @RequestBody EventDTO eventDto) {
+
+        return new ResponseEntity<>(eventService.saveEvent(authentication, eventDto), HttpStatus.OK);
     }
 
     @DeleteMapping("/delete")
-    public APIResponse deleteEvent(@RequestParam Long eventId) {
-        return eventService.deleteEventById(eventId);
+    public ResponseEntity<APIResponse> deleteEvent(@RequestParam("eventId") Long eventId) {
+        return new ResponseEntity<>(eventService.deleteEventById(eventId), HttpStatus.OK);
     }
 
     @PutMapping("/update")
-    public APIResponse updateEvent(@RequestBody EventDTO eventDto) {
-        return eventService.updateEvent(eventDto);
+    public ResponseEntity<APIResponse> updateEvent(@RequestParam("eventId") Long eventId,@RequestBody EventDTO eventDto) {
+        return new ResponseEntity<>(eventService.updateEvent(eventId, eventDto), HttpStatus.OK);
     }
 }

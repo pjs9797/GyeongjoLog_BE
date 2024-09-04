@@ -3,8 +3,11 @@ package com.example.gyeongjoLog.config;
 import com.example.gyeongjoLog.jwt.JWTFilter;
 import com.example.gyeongjoLog.jwt.JWTUtil;
 import com.example.gyeongjoLog.jwt.LoginFilter;
+import com.example.gyeongjoLog.user.repository.RefreshTokenRepository;
 import com.example.gyeongjoLog.user.service.CustomUserDetailsService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -12,6 +15,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -19,19 +23,19 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Autowired
-    private AuthenticationConfiguration authenticationConfiguration;
+    @Value("${spring.jwt.token.refresh.expiration.time}")
+    private long refreshExpirationTime;
 
-    @Autowired
-    private JWTUtil jwtUtil;
+    private final AuthenticationConfiguration authenticationConfiguration;
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private final JWTUtil jwtUtil;
 
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
+    private final CustomUserDetailsService customUserDetailsService;
+
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
@@ -47,29 +51,38 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         // CSRF 비활성화
-        http.csrf(csrf -> csrf.disable());
+        http.csrf(AbstractHttpConfigurer::disable);
 
         // Form 로그인 방식 비활성화
-        http.formLogin(form -> form.disable());
+        http.formLogin(AbstractHttpConfigurer::disable);
 
         // HTTP Basic 인증 방식 비활성화
-        http.httpBasic(basic -> basic.disable());
+        http.httpBasic(AbstractHttpConfigurer::disable);
 
         // URL 별 권한 설정
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/**").permitAll()
-                .requestMatchers("/admin").hasRole("ADMIN")
+                .requestMatchers("/user/**").permitAll()
                 .anyRequest().authenticated());
 
         // JWT 필터 설정
-        //http.addFilterBefore(new JWTFilter(jwtUtil, redisTemplate), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JWTFilter(jwtUtil, redisTemplate), UsernamePasswordAuthenticationFilter.class);
 
         // 로그인 필터 설정
-        //http.addFilterBefore(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, refreshExpirationTime), UsernamePasswordAuthenticationFilter.class);
 
         // 세션 설정 (Stateless로 설정하여 세션을 사용하지 않음)
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
+
+//        http
+//                .csrf(AbstractHttpConfigurer::disable)
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers("/user/**").permitAll()  // join과 login은 누구나 접근 가능
+//                        .anyRequest().authenticated()
+//                )
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+//
+//        return http.build();
     }
 }

@@ -4,6 +4,9 @@ import com.example.gyeongjoLog.common.APIResponse;
 import com.example.gyeongjoLog.event.service.EventTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -11,21 +14,17 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class EventTypeController {
 
-    EventTypeService eventTypeService;
-    @Autowired
-    public EventTypeController(EventTypeService eventTypeService){
-        this.eventTypeService = eventTypeService;
-    }
+    private final EventTypeService eventTypeService;
 
     @GetMapping()
-    public APIResponse getEventTypes(@RequestParam Long userId) {
-        return eventTypeService.getEventTypes(userId);
+    public ResponseEntity<APIResponse> getEventTypes(Authentication authentication) {
+        return new ResponseEntity<>(eventTypeService.getEventTypes(authentication), HttpStatus.OK);
     }
 
     @PostMapping("/add")
-    public APIResponse addEventType(@RequestParam Long userId,
+    public ResponseEntity<APIResponse> addEventType(Authentication authentication,
                                     @RequestParam String eventType,
                                     @RequestParam String color) {
-        return eventTypeService.addEventType(userId, eventType, color);
+        return new ResponseEntity<>(eventTypeService.addEventType(authentication, eventType, color), HttpStatus.OK);
     }
 }

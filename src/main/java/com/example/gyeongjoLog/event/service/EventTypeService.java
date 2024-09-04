@@ -6,35 +6,37 @@ import com.example.gyeongjoLog.event.entity.EventTypeEntity;
 import com.example.gyeongjoLog.event.repository.EventTypeRepository;
 import com.example.gyeongjoLog.user.entity.UserEntity;
 import com.example.gyeongjoLog.user.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class EventTypeService {
 
-    EventTypeRepository eventTypeRepository;
-    UserRepository userRepository;
+    private final EventTypeRepository eventTypeRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    public EventTypeService(EventTypeRepository eventTypeRepository, UserRepository userRepository){
-        this.eventTypeRepository = eventTypeRepository;
-        this.userRepository = userRepository;
-    }
+    public APIResponse getEventTypes(Authentication authentication) {
+        String email = authentication.getName();
+        Long userId = userRepository.findByEmail(email).getId();
 
-    public APIResponse getEventTypes(Long userId) {
         List<EventTypeEntity> eventTypes = eventTypeRepository.findByUserId(userId);
 
         List<EventTypeDTO> eventTypeDTOs = eventTypes.stream()
                 .map(eventType -> new EventTypeDTO(eventType.getEventType(), eventType.getColor()))
                 .collect(Collectors.toList());
 
-        return APIResponse.createWithData("200", "이벤트 타입 목록 조회 성공", eventTypeDTOs);
+        return APIResponse.builder().resultCode("200").resultMessage("이벤트 타입 목록 조회 성공").data(eventTypeDTOs).build();
     }
 
-    public APIResponse addEventType(Long userId, String eventType, String color) {
+    public APIResponse addEventType(Authentication authentication, String eventType, String color) {
+        String email = authentication.getName();
+        Long userId = userRepository.findByEmail(email).getId();
+
         EventTypeEntity newEventType = EventTypeEntity.builder()
                 .eventType(eventType)
                 .color(color)
@@ -42,6 +44,6 @@ public class EventTypeService {
                 .build();
 
         eventTypeRepository.save(newEventType);
-        return APIResponse.createWithoutData("200", "이벤트 타입 추가 성공");
+        return APIResponse.builder().resultCode("200").resultMessage("이벤트 타입 추가 성공").build();
     }
 }
