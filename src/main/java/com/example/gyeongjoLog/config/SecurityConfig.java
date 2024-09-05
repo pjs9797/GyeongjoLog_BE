@@ -2,11 +2,9 @@ package com.example.gyeongjoLog.config;
 
 import com.example.gyeongjoLog.jwt.JWTFilter;
 import com.example.gyeongjoLog.jwt.JWTUtil;
-import com.example.gyeongjoLog.jwt.LoginFilter;
-import com.example.gyeongjoLog.user.repository.RefreshTokenRepository;
+import com.example.gyeongjoLog.user.login.LoginFilter;
 import com.example.gyeongjoLog.user.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,8 +30,6 @@ public class SecurityConfig {
     private final AuthenticationConfiguration authenticationConfiguration;
 
     private final JWTUtil jwtUtil;
-
-    private final CustomUserDetailsService customUserDetailsService;
 
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -74,15 +70,5 @@ public class SecurityConfig {
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
-
-//        http
-//                .csrf(AbstractHttpConfigurer::disable)
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/user/**").permitAll()  // join과 login은 누구나 접근 가능
-//                        .anyRequest().authenticated()
-//                )
-//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//
-//        return http.build();
     }
 }

@@ -5,17 +5,19 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EventDTO {
-    private Long id;
+public class IndividualStatisticsDTO {
     private String name;
     private String phoneNumber;
-    private String eventType;
-    private String date;
     private String relationship;
-    private int amount;
-    private String memo;
+    private int totalInteractions;
+    private int totalAmount;
+    private int totalReceivedAmount;
+    private int totalSentAmount;
+    private List<EventDetailDTO> eventDetails;
 }

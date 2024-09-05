@@ -33,13 +33,13 @@ public class EventTypeService {
         return APIResponse.builder().resultCode("200").resultMessage("이벤트 타입 목록 조회 성공").data(eventTypeDTOs).build();
     }
 
-    public APIResponse addEventType(Authentication authentication, String eventType, String color) {
+    public APIResponse addEventType(Authentication authentication, EventTypeDTO eventTypeDTO) {
         String email = authentication.getName();
         Long userId = userRepository.findByEmail(email).getId();
 
         EventTypeEntity newEventType = EventTypeEntity.builder()
-                .eventType(eventType)
-                .color(color)
+                .eventType(eventTypeDTO.getEventType())
+                .color(eventTypeDTO.getColor())
                 .user(UserEntity.builder().id(userId).build())
                 .build();
 

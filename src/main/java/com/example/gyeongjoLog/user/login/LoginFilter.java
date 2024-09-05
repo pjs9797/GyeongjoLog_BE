@@ -1,8 +1,10 @@
-package com.example.gyeongjoLog.jwt;
+package com.example.gyeongjoLog.user.login;
 
 import com.example.gyeongjoLog.common.APIResponse;
+import com.example.gyeongjoLog.jwt.JWTUtil;
 import com.example.gyeongjoLog.user.dto.CustomUserDetails;
 import com.example.gyeongjoLog.user.repository.RefreshTokenRepository;
+import com.example.gyeongjoLog.user.service.CustomUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +31,6 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.refreshExpirationTime = refreshExpirationTime;
-
         setFilterProcessesUrl("/user/login");
     }
 
@@ -81,7 +82,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     }
 
     @Override
-    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) {
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     }
 }
