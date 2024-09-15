@@ -29,17 +29,17 @@ public class UserController {
 //        return new ResponseEntity<>(userService.login(userDTO), HttpStatus.OK);
 //    }
 
-    @GetMapping("/emailCheck")
-    public ResponseEntity<APIResponse> checkEmail(@RequestParam("email") String email) {
-        return new ResponseEntity<>(userService.checkEmail(email), HttpStatus.OK);
+    @PostMapping("/checkDuplicateEmail")
+    public ResponseEntity<APIResponse> checkEmail(@RequestBody EmailDto emailDto) {
+        return new ResponseEntity<>(userService.checkEmail(emailDto.getEmail()), HttpStatus.OK);
     }
 
-    @PostMapping ("/emailSend")
+    @PostMapping ("/sendAuthCode")
     public ResponseEntity<APIResponse> mailSend(@RequestBody @Valid EmailDto emailDto){
         return new ResponseEntity<>(userService.sendEmail(emailDto.getEmail()),HttpStatus.OK);
     }
 
-    @PostMapping("/emailAuthCheck")
+    @PostMapping("/checkAuthCode")
     public ResponseEntity<APIResponse> AuthCheck(@RequestBody @Valid EmailCheckDTO emailCheckDto){
         Boolean Checked=userService.checkAuthNum(emailCheckDto.getEmail(),emailCheckDto.getAuthNum());
         if(Checked){
@@ -48,5 +48,10 @@ public class UserController {
         else{
             return new ResponseEntity<>(APIResponse.builder().resultCode("401").resultMessage("인증 실패").build(),HttpStatus.OK);
         }
+    }
+
+    @PostMapping("/saveNewPw")
+    public ResponseEntity<APIResponse> saveNewPw(@RequestBody UserDTO userDTO) {
+        return new ResponseEntity<>(userService.saveNewPw(userDTO), HttpStatus.OK);
     }
 }

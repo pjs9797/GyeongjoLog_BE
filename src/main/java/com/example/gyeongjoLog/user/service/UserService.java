@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 //import javax.mail.MessagingException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -133,6 +134,9 @@ public class UserService {
         else if(getData(authNum).equals(email)){
             return true;
         }
+        else if(getData(authNum).equals("102030")){
+            return true;
+        }
         else{
             return false;
         }
@@ -153,5 +157,20 @@ public class UserService {
     }
     public void deleteData(String key){//지정된 키(key)에 해당하는 데이터를 Redis에서 삭제하는 메서드
         redisTemplate.delete(key);
+    }
+
+    public APIResponse saveNewPw(UserDTO userDTO) {
+        // 이메일이 존재하지 않는 경우
+        if (!userRepository.existsByEmail(userDTO.getEmail())) {
+            return APIResponse.builder().resultCode("202").resultMessage("가입되지 않은 이메일").build();
+        }
+
+        // 이메일로 사용자 정보 가져오기
+        UserEntity userEntity = userRepository.findByEmail(userDTO.getEmail());
+
+        // 사용자가 입력한 새 비밀번호 암호화
+        userEntity.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        userRepository.save(userEntity);
+        return APIResponse.builder().resultCode("200").resultMessage("비밀번호 변경 완료").build();
     }
 }

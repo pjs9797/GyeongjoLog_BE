@@ -2,7 +2,6 @@ package com.example.gyeongjoLog.event.service;
 
 import com.example.gyeongjoLog.common.APIResponse;
 import com.example.gyeongjoLog.event.dto.EventDTO;
-import com.example.gyeongjoLog.event.dto.MyEventDTO;
 import com.example.gyeongjoLog.event.entity.EventEntity;
 import com.example.gyeongjoLog.event.repository.EventRepository;
 import com.example.gyeongjoLog.user.dto.CustomUserDetails;
@@ -17,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
@@ -35,29 +35,29 @@ public class EventService {
 
     public APIResponse getMyEvents(Authentication authentication) {
         String email = authentication.getName();
-        // 이메일로 userId 조회
+
         Long userId = userRepository.findByEmail(email).getId();
+
         // 사용자의 이벤트를 조회
         List<EventEntity> events = eventRepository.findMyEvents(userId);
 
-        // 이벤트를 날짜와 이벤트 타입으로 그룹화하고, 해당 그룹의 이벤트 건수를 계산
-        Map<String, Map<String, Long>> groupedEvents = events.stream()
-                .collect(Collectors.groupingBy(EventEntity::getDate,
-                        Collectors.groupingBy(EventEntity::getEventType,
-                                Collectors.counting())));
-
-        // MyEventDTO 리스트로 변환
-        List<MyEventDTO> myEventDTOs = groupedEvents.entrySet().stream()
-                .flatMap(dateEntry -> dateEntry.getValue().entrySet().stream()
-                        .map(eventTypeEntry -> MyEventDTO.builder()
-                                .date(dateEntry.getKey())
-                                .eventType(eventTypeEntry.getKey())
-                                .eventCnt(eventTypeEntry.getValue().intValue())
-                                .build()))
-                .sorted(Comparator.comparing(MyEventDTO::getDate).reversed())
+        // EventEntity 리스트를 EventDTO 리스트로 변환
+        List<EventDTO> eventDTOs = events.stream()
+                .map(event -> EventDTO.builder()
+                        .id(event.getId())
+                        .name(event.getName())
+                        .phoneNumber(event.getPhoneNumber())
+                        .eventType(event.getEventType())
+                        .date(event.getDate().toString())  // 필요한 포맷으로 변환
+                        .relationship(event.getRelationship())
+                        .amount(event.getAmount())
+                        .memo(event.getMemo())
+                        .build())
+                .sorted(Comparator.comparing(EventDTO::getDate).reversed()) // 날짜 기준 내림차순 정렬
                 .collect(Collectors.toList());
 
-        return APIResponse.builder().resultCode("200").resultMessage("나의 경조사 목록 조회 성공").data(myEventDTOs).build();
+        // APIResponse에 담아 반환
+        return APIResponse.builder().resultCode("200").resultMessage("나의 경조사 목록 조회 성공").data(eventDTOs).build();
     }
 
     public APIResponse getMyEventSummaries(Authentication authentication, String type, String date) {
@@ -99,11 +99,13 @@ public class EventService {
         String email = authentication.getName();
         Long userId = userRepository.findByEmail(email).getId();
 
-        LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy.M.d"));
+        // 'yyyy.MM' 형식으로 입력된 날짜를 YearMonth로 파싱
+        YearMonth yearMonth = YearMonth.parse(date, DateTimeFormatter.ofPattern("yyyy.MM"));
 
-        String yearMonth = localDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        // 년-월을 'yyyy-MM' 형식으로 변환
+        String formattedYearMonth = yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
-        List<EventEntity> events = eventRepository.findEventsByYearMonth(userId, yearMonth);
+        List<EventEntity> events = eventRepository.findEventsByYearMonth(userId, formattedYearMonth);
 
         List<EventDTO> eventDTOs = events.stream()
                 .map(this::convertToDTO)
@@ -111,6 +113,7 @@ public class EventService {
 
         return APIResponse.builder().resultCode("200").resultMessage("해당 월의 이벤트 조회 성공").data(eventDTOs).build();
     }
+
 
     private EventDTO convertToDTO(EventEntity eventEntity) {
         return EventDTO.builder()
