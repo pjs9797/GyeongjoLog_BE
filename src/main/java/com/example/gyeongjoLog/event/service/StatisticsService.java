@@ -136,6 +136,49 @@ public class StatisticsService {
                 .build();
     }
 
+    public Map<String, Object> fetchMostInteractedPersonThisMonth(Authentication authentication) {
+        String email = authentication.getName();
+        Long userId = userRepository.findByEmail(email).getId();
+
+        List<EventEntity> events = eventRepository.findAllEvents(userId);
+
+        LocalDate now = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.M.d");
+
+        // 이번 달의 이벤트만 필터링
+        List<EventEntity> thisMonthEvents = events.stream()
+                .filter(event -> {
+                    LocalDate eventDate = LocalDate.parse(event.getDate(), formatter);
+                    return eventDate.getYear() == now.getYear() && eventDate.getMonth() == now.getMonth();
+                })
+                .collect(Collectors.toList());
+
+        // PersonKey로 그룹화하고 총 거래 금액 계산
+        Map<PersonKey, Integer> totalAmountByPerson = thisMonthEvents.stream()
+                .collect(Collectors.groupingBy(
+                        event -> new PersonKey(event.getName(), event.getPhoneNumber()),
+                        Collectors.summingInt(event -> Math.abs(event.getAmount()))
+                ));
+
+        // 가장 많이 주고받은 사람 찾기
+        Map.Entry<PersonKey, Integer> maxEntry = totalAmountByPerson.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .orElse(null);
+
+        if (maxEntry == null) {
+            return Map.of("name", null, "statistics", null);
+        }
+
+        PersonKey mostInteractedPerson = maxEntry.getKey();
+        List<EventEntity> personEvents = thisMonthEvents.stream()
+                .filter(event -> event.getName().equals(mostInteractedPerson.name) && event.getPhoneNumber().equals(mostInteractedPerson.phoneNumber))
+                .collect(Collectors.toList());
+
+        IndividualStatisticsDTO statistics = calculateStatistics(personEvents);
+
+        return Map.of("name", mostInteractedPerson.name, "statistics", statistics);
+    }
+
     // 추가: PersonKey 클래스를 정의하여 이름과 전화번호로 그룹화할 수 있도록 합니다.
     private static class PersonKey {
         private String name;

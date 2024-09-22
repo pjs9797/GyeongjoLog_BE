@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -31,5 +32,11 @@ public class StatisticsController {
     public ResponseEntity<APIResponse> getMonthlyStatistics(Authentication authentication) {
         List<MonthlyStatisticsDTO> statistics = statisticsService.fetchMonthlyStatistics(authentication);
         return new ResponseEntity<>(APIResponse.builder().resultCode("200").resultMessage("월별 통계 조회 성공").data(statistics).build(), HttpStatus.OK);
+    }
+
+    @GetMapping("/mostInteractedThisMonth")
+    public ResponseEntity<APIResponse> getMostInteractedPersonThisMonth(Authentication authentication) {
+        Map<String, Object> result = statisticsService.fetchMostInteractedPersonThisMonth(authentication);
+        return new ResponseEntity<>(APIResponse.builder().resultCode("200").resultMessage("이번 달 가장 많이 주고받은 사람 조회 성공").data(result).build(), HttpStatus.OK);
     }
 }
