@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +19,16 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @GetMapping("/logout")
+    public ResponseEntity<APIResponse> logout(Authentication authentication) {
+        return new ResponseEntity<>(userService.logout(authentication), HttpStatus.OK);
+    }
+
+    @GetMapping("/withdraw")
+    public ResponseEntity<APIResponse> withdraw(Authentication authentication) {
+        return new ResponseEntity<>(userService.withdraw(authentication), HttpStatus.OK);
+    }
 
     @PostMapping("/join")
     public ResponseEntity<APIResponse> join(@RequestBody UserDTO userDTO) {

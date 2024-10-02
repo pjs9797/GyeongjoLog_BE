@@ -7,6 +7,7 @@ import com.example.gyeongjoLog.user.repository.RefreshTokenRepository;
 import com.example.gyeongjoLog.user.service.CustomUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -53,29 +54,25 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
             throw new RuntimeException("Failed to parse authentication request body", e);
         }
     }
-
     @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication) throws IOException {
-        // 인증 성공 후 JWT 토큰 생성
-        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
-
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+        CustomUserDetails customUserDetails = (CustomUserDetails) authResult.getPrincipal();
         String email = customUserDetails.getUsername();
-        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-        String role = authorities.iterator().next().getAuthority();
+        String role = customUserDetails.getAuthorities().iterator().next().getAuthority();
 
         String accessToken = jwtUtil.createAccessToken(email, role);
         String refreshToken = jwtUtil.createRefreshToken(email, role);
-        log.info("리프레시 토큰",refreshExpirationTime);
-        // Refresh Token을 Redis에 저장
+
         jwtUtil.saveRefreshTokenAtRedis(email, refreshToken, refreshExpirationTime);
 
-        // Access Token과 Refresh Token을 헤더에 추가
         response.addHeader("Authorization", "Bearer " + accessToken);
         response.addHeader("Authorization-Refresh", "Bearer " + refreshToken);
 
-        APIResponse apiResponse = APIResponse.builder().resultCode("200").resultMessage("로그인 성공").build();
+        APIResponse apiResponse = APIResponse.builder()
+                .resultCode("200")
+                .resultMessage("로그인 성공")
+                .build();
 
-        // 응답을 JSON 형태로 변환하여 바디에 추가
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(new ObjectMapper().writeValueAsString(apiResponse));
@@ -83,6 +80,15 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setStatus(HttpServletResponse.SC_OK);
+
+        APIResponse apiResponse = APIResponse.builder()
+                .resultCode("403")
+                .resultMessage("로그인 정보를 찾을 수 없습니다")
+                .build();
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(new ObjectMapper().writeValueAsString(apiResponse));
     }
 }

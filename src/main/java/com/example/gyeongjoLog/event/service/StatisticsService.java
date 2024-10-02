@@ -47,7 +47,7 @@ public class StatisticsService {
         List<EventEntity> events = eventRepository.findAllEvents(userId);
 
         LocalDate currentDate = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.M");
 
         // 마지막 6개월의 월을 생성
         List<String> lastSixMonths = new ArrayList<>();

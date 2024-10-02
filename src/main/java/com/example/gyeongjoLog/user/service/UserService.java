@@ -8,12 +8,14 @@ import com.example.gyeongjoLog.user.dto.UserDTO;
 import com.example.gyeongjoLog.user.entity.UserEntity;
 import com.example.gyeongjoLog.user.repository.UserRepository;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,7 @@ import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 @Slf4j
 public class UserService {
 
@@ -34,6 +37,33 @@ public class UserService {
     private final JWTUtil jwtUtil;
     private final JavaMailSender mailSender;
     private int authNumber;
+
+
+    public APIResponse logout(Authentication authentication) {
+        String email = authentication.getName();
+        jwtUtil.deleteRefreshTokenFromRedis(email);
+        return APIResponse.builder()
+                .resultCode("200")
+                .resultMessage("로그아웃 성공")
+                .build();
+    }
+
+    public APIResponse withdraw(Authentication authentication) {
+        String email = authentication.getName();
+        UserEntity user = userRepository.findByEmail(email);
+        if (user == null) {
+            return APIResponse.builder()
+                    .resultCode("404")
+                    .resultMessage("사용자를 찾을 수 없습니다")
+                    .build();
+        }
+        userRepository.delete(user);
+        jwtUtil.deleteRefreshTokenFromRedis(email);
+        return APIResponse.builder()
+                .resultCode("200")
+                .resultMessage("회원 탈퇴 성공")
+                .build();
+    }
 
     public APIResponse join(UserDTO userDTO) {
         if (userRepository.existsByEmail(userDTO.getEmail())) {

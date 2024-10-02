@@ -3,8 +3,10 @@ package com.example.gyeongjoLog.jwt;
 import com.example.gyeongjoLog.user.repository.RefreshTokenRepository;
 import com.example.gyeongjoLog.user.service.CustomUserDetailsService;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,12 +43,11 @@ public class JWTUtil {
     private final RedisTemplate<String, String> redisTemplate;
 
     public JWTUtil(@Value("${spring.jwt.secret}") String secret, RedisTemplate<String, String> redisTemplate, RefreshTokenRepository refreshTokenRepository, CustomUserDetailsService customUserDetailsService) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes()); // SecretKey 생성
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
         this.redisTemplate = redisTemplate;
         this.refreshTokenRepository = refreshTokenRepository;
         this.customUserDetailsService = customUserDetailsService;
     }
-
 
     public String getEmail(String token) {
         Claims claims = parseClaims(token);
@@ -59,14 +60,15 @@ public class JWTUtil {
     }
 
     public Boolean isExpired(String token) {
-        Claims claims = parseClaims(token);
-        return claims.getExpiration().before(new Date());
-    }
-
-    public Boolean isRefreshTokenExpired(String token) {
-        String email = getEmail(token);
-        Long expireTime = redisTemplate.getExpire(email, TimeUnit.MILLISECONDS);
-        return expireTime != null && expireTime <= 0;
+        try {
+            Claims claims = parseClaims(token);
+            return claims.getExpiration().before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            log.error("Error checking JWT expiration", e);
+            return true;
+        }
     }
 
     public String createAccessToken(String email, String role) {
@@ -89,46 +91,6 @@ public class JWTUtil {
                 .compact();
     }
 
-//    public String createAccessToken(String email, String role) {
-//        ZonedDateTime nowInKST = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
-//        Date expirationDate = Date.from(nowInKST.plusSeconds(accessExpirationTime).toInstant());
-//
-//        return Jwts.builder()
-//                .claim("email", email)
-//                .claim("role", role)
-//                .setIssuedAt(Date.from(nowInKST.toInstant()))
-//                .setExpiration(expirationDate)
-//                .signWith(secretKey)
-//                .compact();
-//    }
-//
-//    public String createRefreshToken(String email, String role) {
-//        ZonedDateTime nowInKST = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
-//        Date expirationDate = Date.from(nowInKST.plusSeconds(refreshExpirationTime).toInstant());
-//
-//        return Jwts.builder()
-//                .claim("email", email)
-//                .claim("role", role)
-//                .setIssuedAt(Date.from(nowInKST.toInstant()))
-//                .setExpiration(expirationDate)
-//                .signWith(secretKey)
-//                .compact();
-//    }
-
-    public void saveRefreshTokenAtRedis(String email, String token, Long expiredMs) {
-
-        log.info("Saving refresh token with expiration time: {}", expiredMs);
-
-        if (expiredMs == null || expiredMs <= 0) {
-            throw new IllegalArgumentException("Expiration time must be greater than 0");
-        }
-        redisTemplate.opsForValue().set(email, token, expiredMs,TimeUnit.MILLISECONDS);
-    }
-
-    public void saveLogoutToken(String token, Long expiredMs) {
-        redisTemplate.opsForValue().set(token, "logout", expiredMs, TimeUnit.MILLISECONDS);
-    }
-
     public Claims parseClaims(String token) {
         return Jwts.parser()
                 .setSigningKey(secretKey)
@@ -147,4 +109,38 @@ public class JWTUtil {
         return refreshTokenRepository.existByRefreshToken(token);
     }
 
+    public void invalidateUserSession(String email) {
+        redisTemplate.delete(email);
+    }
+
+    public void saveRefreshTokenAtRedis(String email, String token, Long expiredMs) {
+        String key = "user:" + email + ":refresh_token";
+        redisTemplate.opsForValue().set(key, token, expiredMs, TimeUnit.MILLISECONDS);
+    }
+
+    public String getRefreshTokenFromRedis(String email) {
+        String key = "user:" + email + ":refresh_token";
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    public void deleteRefreshTokenFromRedis(String email) {
+        String key = "user:" + email + ":refresh_token";
+        redisTemplate.delete(key);
+    }
+
+    public String getAccessToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
+    public String getRefreshToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization-Refresh");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
 }

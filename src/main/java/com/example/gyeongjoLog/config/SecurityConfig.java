@@ -57,6 +57,8 @@ public class SecurityConfig {
 
         // URL 별 권한 설정
         http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/user/withdraw").authenticated()
+                .requestMatchers("/user/logout").authenticated()
                 .requestMatchers("/user/**").permitAll()
                 .anyRequest().authenticated());
 

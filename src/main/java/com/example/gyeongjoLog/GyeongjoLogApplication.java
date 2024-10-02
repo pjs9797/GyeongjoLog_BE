@@ -19,11 +19,4 @@ public class GyeongjoLogApplication {
 		SpringApplication.run(GyeongjoLogApplication.class, args);
 	}
 
-//	@PostConstruct
-//	public void init() {
-//		// timezone 설정
-//		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
-//		LocalDateTime now = LocalDateTime.now();
-//		System.out.println("현재시간 " + now);
-//	}
 }
